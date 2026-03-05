@@ -65,3 +65,33 @@ class TestMBSCashFlows:
         cfs = generate_mbs_cashflows(0.045, 2.75)
         wal = compute_wal(cfs)
         assert abs(wal - 6.0) < 0.5
+
+
+class TestPSASolver:
+    def test_psa_from_wal_6yr(self):
+        from analytics_engine.mbs import psa_from_wal
+        psa = psa_from_wal(6.0, 0.045)
+        assert abs(psa - 2.7471) < 0.05
+
+    def test_psa_from_wal_roundtrip(self):
+        from analytics_engine.mbs import psa_from_wal, generate_mbs_cashflows, compute_wal
+        psa = psa_from_wal(6.0, 0.045)
+        cfs = generate_mbs_cashflows(0.045, psa)
+        wal = compute_wal(cfs)
+        assert abs(wal - 6.0) < 0.01
+
+
+class TestMBSAccruedInterest:
+    def test_accrued_march_15(self):
+        from datetime import date
+        from analytics_engine.mbs import mbs_accrued_interest
+        accrued = mbs_accrued_interest(date(2026, 3, 15), 0.045, "ACT/360")
+        expected = 100.0 * 0.045 * (14 / 360)
+        assert abs(accrued - expected) < 1e-6
+
+    def test_accrued_first_of_month(self):
+        from datetime import date
+        from analytics_engine.mbs import mbs_accrued_interest
+        accrued = mbs_accrued_interest(date(2026, 3, 1), 0.045, "ACT/360")
+        assert accrued == 0.0
+
