@@ -53,3 +53,28 @@ B5: Zero Coupon      |             0.0000 |       95.0000 |    5.2632%
 *   **Accrued Interest (0.0000):** Zero coupon bonds do not pay periodic interest, so there is nothing to accrue.
 *   **Dirty Price (95.0000):** Equal to the clean price.
 *   **YTM (5.2632%):** Unlike the others, our engine calculates this using a closed-form solution: `(Face / Price)^(1/Years) - 1`. Here, the investor pays 95 today and receives 100 in exactly one year. `(100 / 95)^1 - 1 = 0.05263`, or exactly 5.2632%. All of the return comes purely from capital appreciation.
+
+---
+
+## FAQ: Concepts
+
+### What are "Coupons"?
+In fixed income, a **coupon** is simply the regular interest payment that the bond issuer pays to the bondholder. 
+
+The term comes from historical practice: physical paper bonds used to have small detachable "coupons" printed around the edges. When an interest payment was due, the investor would literally cut off the appropriate coupon with scissors and hand it to a bank to receive their cash. 
+
+### Why do some bonds have $0 Accrued Interest?
+The term "accrued interest" sounds like "total money earned," but in the bond market, it is a specific mechanical "truing up" between buyers and sellers.
+
+If a bond pays a $6 coupon every 6 months (June 1 and Dec 1), and you buy it from me exactly halfway through the period (March 1), it isn't fair that you get the *entire* $6 coupon on June 1 when I held the bond for the first 3 months. To make it fair, when you buy the bond on March 1, you must pay me the market value of the bond (Clean Price) **PLUS the Accrued Interest** (the $3 I earned but haven't been paid yet). 
+
+However, if you buy the bond from me on the exact day the coupon is paid (e.g., Dec 1), I just keep the coupon the issuer hands me. You start fresh for the next period, so you owe me $0 in accrued interest. **This is why Bonds 2 and 4 had $0 accrued interest — the settlement date fell exactly on a coupon payment date.**
+
+### If accrued interest is $0, is the total return $0?
+No! It helps to separate the concept of **Accrued Interest** (the mechanical daily payment to a seller) from **Total Return or Yield** (the actual money you make).
+
+The **Yield to Maturity (YTM)** represents the *actual, total annualized return* you get from holding the bond. It consists of two things combined:
+1.  The coupon payments you collect along the way.
+2.  The capital gain (or loss) between the price you paid and the $100 you get back at maturity.
+
+For the **Zero Coupon Bond (B5)**, there are no coupons to fight over with a seller, so the "accrued interest" trading mechanism is always $0. But the total return is emphatically *not* zero: you pay $95 today, and you get $100 in a year. That $5 profit is a very real **5.26% YTM**, even though the "accrued interest" line item on the trade ticket says $0.00.
