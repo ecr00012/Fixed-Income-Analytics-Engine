@@ -100,3 +100,65 @@ def mbs_accrued_interest(
     dcf = day_count_fraction(accrual_start, settlement, day_count)
     return current_face * coupon_rate * dcf
 
+
+def solve_cfy(cash_flows: list[dict], dirty_price: float) -> dict:
+    """Solve for Cash Flow Yield. Returns monthly, annual, and BEY."""
+    def pv(y):
+        return sum(cf["total_cf"] / (1 + y) ** cf["t"] for cf in cash_flows)
+
+    monthly_yield = brentq(lambda y: pv(y) - dirty_price, 1e-6, 0.05)
+
+    return {
+        "monthly_yield": monthly_yield,
+        "cfy_annual": (1 + monthly_yield) ** 12 - 1,
+        "cfy_bey": ((1 + monthly_yield) ** 6 - 1) * 2,
+    }
+
+
+def price_mbs(spec: "BondSpec") -> "BondResult":
+    """MBS passthrough pricing pipeline.
+
+    Reads from spec: bond_type, coupon_rate, maturity (date), wal (float years),
+                     clean_price, settlement, day_count, freq
+    Assumes fixed: current_face=100.0, term_months=360, seasoning=0
+    PSA speed is solved internally from the WAL.
+    """
+    from analytics_engine.models import BondResult, BondSpec
+    from analytics_engine.solver import solve_ytm
+
+    current_face = 100.0
+    term_months = 360
+    seasoning = 0
+    wal = spec.wal
+
+    # Step 1: Solve PSA from WAL
+    psa_speed = psa_from_wal(wal, spec.coupon_rate, term_months, current_face, seasoning)
+
+    # Step 2: Accrued interest (from 1st of settlement month)
+    accrued = mbs_accrued_interest(spec.settlement, spec.coupon_rate, spec.day_count, current_face)
+    dirty_price = spec.clean_price + accrued
+
+    # Step 3: Cash flows and CFY
+    cash_flows = generate_mbs_cashflows(spec.coupon_rate, psa_speed, term_months, current_face, seasoning)
+    wal_computed = compute_wal(cash_flows)
+    cfy = solve_cfy(cash_flows, dirty_price)
+
+    # Step 4: Bullet-equivalent YTM via existing solver
+    ytm_result = solve_ytm(spec)
+
+    return BondResult(
+        spec=spec,
+        accrued_interest=accrued,
+        dirty_price=dirty_price,
+        ytm=ytm_result.ytm,
+        mbs_details={
+            "psa_speed": psa_speed,
+            "wal_years": wal_computed,
+            "cfy_monthly": cfy["monthly_yield"],
+            "cfy_annual": cfy["cfy_annual"],
+            "cfy_bey": cfy["cfy_bey"],
+            "num_cashflow_months": len(cash_flows),
+        },
+    )
+
+

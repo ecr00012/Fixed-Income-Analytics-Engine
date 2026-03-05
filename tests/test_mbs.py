@@ -95,3 +95,52 @@ class TestMBSAccruedInterest:
         accrued = mbs_accrued_interest(date(2026, 3, 1), 0.045, "ACT/360")
         assert accrued == 0.0
 
+
+class TestCFYSolver:
+    def test_cfy_bey_benchmark(self):
+        from analytics_engine.mbs import psa_from_wal, generate_mbs_cashflows, solve_cfy
+        psa = psa_from_wal(6.0, 0.045)
+        cfs = generate_mbs_cashflows(0.045, psa)
+        dirty = 99.0 + 100.0 * 0.045 * (14 / 360)  # clean + accrued
+        cfy = solve_cfy(cfs, dirty)
+        assert abs(cfy["cfy_bey"] - 0.04716) < 0.002
+
+    def test_cfy_bey_100_psa(self):
+        from analytics_engine.mbs import generate_mbs_cashflows, solve_cfy
+        cfs = generate_mbs_cashflows(0.045, 1.0)
+        cfy = solve_cfy(cfs, 99.1694)
+        assert abs(cfy["cfy_bey"] - 0.04651) < 0.002
+
+
+class TestPriceMBS:
+    def test_full_pipeline_benchmark(self):
+        from datetime import date
+        from analytics_engine.mbs import price_mbs
+        from analytics_engine.models import BondSpec
+        spec = BondSpec(
+            name="B4: MBS", clean_price=99.00, coupon_rate=0.045,
+            maturity=date(2032, 3, 15), settlement=date(2026, 3, 15),
+            freq=12, day_count="ACT/360",
+            bond_type="MBS", wal=6.0,
+        )
+        result = price_mbs(spec)
+        assert result.mbs_details is not None
+        assert abs(result.mbs_details["psa_speed"] - 2.7471) < 0.05
+        assert abs(result.mbs_details["cfy_bey"] - 0.04716) < 0.002
+        assert result.ytm > 0
+
+    def test_mbs_has_ytm_from_solve_ytm(self):
+        from datetime import date
+        from analytics_engine.mbs import price_mbs
+        from analytics_engine.models import BondSpec
+        spec = BondSpec(
+            name="B4: MBS", clean_price=99.00, coupon_rate=0.045,
+            maturity=date(2032, 3, 15), settlement=date(2026, 3, 15),
+            freq=12, day_count="ACT/360",
+            bond_type="MBS", wal=6.0,
+        )
+        result = price_mbs(spec)
+        assert result.ytm is not None
+        assert result.ytm > 0
+
+
