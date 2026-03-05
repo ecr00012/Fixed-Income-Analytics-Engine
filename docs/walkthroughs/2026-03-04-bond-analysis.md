@@ -78,3 +78,11 @@ The **Yield to Maturity (YTM)** represents the *actual, total annualized return*
 2.  The capital gain (or loss) between the price you paid and the $100 you get back at maturity.
 
 For the **Zero Coupon Bond (B5)**, there are no coupons to fight over with a seller, so the "accrued interest" trading mechanism is always $0. But the total return is emphatically *not* zero: you pay $95 today, and you get $100 in a year. That $5 profit is a very real **5.26% YTM**, even though the "accrued interest" line item on the trade ticket says $0.00.
+
+### Should Yield to Maturity be a Percentage or an Amount?
+Yield to Maturity is **always expressed as an annualized percentage rate**, never as a currency amount.
+
+- **Accrued Interest and Dirty Price** are currency amounts (e.g., $0.72 or $98.97 per $100 of face value). They tell you exactly how much money changes hands on the settlement date.
+- **YTM** is a rate of return (e.g., 3.81%). It acts as the "internal rate of return" (IRR) that equates the present value of all future cash flows to the bond's current dirty price. 
+
+Expressing yield as a percentage allows investors to universally compare the return of bonds with completely different prices, maturities, and coupon rates on an apples-to-apples basis.
