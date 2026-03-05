@@ -55,3 +55,16 @@ class TestAnalyzePortfolio:
         ]
         results = analyze_portfolio(specs)
         assert results[0].accrued_interest == 0.0
+
+
+def test_analyze_bond_routes_mbs():
+    spec = BondSpec(
+        name="B4: MBS", clean_price=99.00, coupon_rate=0.045,
+        maturity=date(2032, 3, 15), settlement=date(2026, 3, 15),
+        freq=12, day_count="ACT/360",
+        bond_type="MBS", wal=6.0,
+    )
+    result = analyze_bond(spec)
+    assert result.mbs_details is not None
+    assert result.mbs_details["psa_speed"] > 0
+

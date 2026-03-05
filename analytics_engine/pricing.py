@@ -1,9 +1,12 @@
 from analytics_engine.models import BondSpec, BondResult
 from analytics_engine.solver import solve_ytm
+from analytics_engine.mbs import price_mbs
 
 
 def analyze_bond(spec: BondSpec) -> BondResult:
-    """Compute accrued interest, dirty price, and YTM for a single bond."""
+    """Compute analytics for a single bond, routing MBS to dedicated pricer."""
+    if spec.bond_type and "mbs" in spec.bond_type.lower():
+        return price_mbs(spec)
     return solve_ytm(spec)
 
 
