@@ -3,9 +3,10 @@ name = "lordabbett"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.5"
+requires-python = ">=3.11"
 dependencies = [
     "python-dateutil>=2.9.0.post0",
+    "scipy>=1.11.0",
 ]
 
 [dependency-groups]
