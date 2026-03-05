@@ -31,3 +31,37 @@ class TestPSAModel:
 
     def test_smm_zero_cpr(self):
         assert cpr_to_smm(0.0) == 0.0
+
+
+class TestMBSCashFlows:
+    def test_cashflows_balance_declines(self):
+        from analytics_engine.mbs import generate_mbs_cashflows
+        cfs = generate_mbs_cashflows(0.045, 2.75)
+        for i in range(1, len(cfs)):
+            assert cfs[i]["balance_bop"] < cfs[i - 1]["balance_bop"]
+
+    def test_cashflows_all_positive(self):
+        from analytics_engine.mbs import generate_mbs_cashflows
+        cfs = generate_mbs_cashflows(0.045, 2.75)
+        for cf in cfs:
+            assert cf["total_cf"] > 0
+            assert cf["interest"] >= 0
+            assert cf["total_principal"] > 0
+
+    def test_cashflows_principal_fully_returned(self):
+        from analytics_engine.mbs import generate_mbs_cashflows
+        cfs = generate_mbs_cashflows(0.045, 2.75)
+        total_principal = sum(cf["total_principal"] for cf in cfs)
+        assert abs(total_principal - 100.0) < 0.01  # virtually all principal returned
+
+    def test_wal_100_psa(self):
+        from analytics_engine.mbs import generate_mbs_cashflows, compute_wal
+        cfs = generate_mbs_cashflows(0.045, 1.0)
+        wal = compute_wal(cfs)
+        assert abs(wal - 10.94) < 0.5
+
+    def test_wal_275_psa(self):
+        from analytics_engine.mbs import generate_mbs_cashflows, compute_wal
+        cfs = generate_mbs_cashflows(0.045, 2.75)
+        wal = compute_wal(cfs)
+        assert abs(wal - 6.0) < 0.5
