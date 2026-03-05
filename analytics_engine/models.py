@@ -11,6 +11,8 @@ class BondSpec:
     settlement: date
     freq: int
     day_count: str
+    bond_type: str = ""
+    wal: float | None = None
 
 
 @dataclass
@@ -19,3 +21,5 @@ class BondResult:
     accrued_interest: float
     dirty_price: float
     ytm: float
+    mbs_details: dict | None = None
+
