@@ -5,25 +5,26 @@ description: "You MUST read this skill at the beginning of the conversation to u
 
 # Project
 You are building a simplified Fixed Income Analytics Engine for a portfolio management system.
-The objective is to implement a Yield-to-Maturity (YTM) solver using the Newton-Raphson method and compute key bond analytics.
-Core Function
+The objective is to implement a Yield-to-Maturity (YTM) solver using the Newton-Raphson method and compute key bond analytics. Implement a hybrid Newton-Raphson x Bisection method for root finding.
+
+## Core Function
 Implement the following function:
 solve_ytm(clean_price, coupon_rate, maturity, settlement, freq, day_count)
 
-## Inputs
-* clean_price: quoted bond price excluding accrued interest
-* coupon_rate: annual coupon rate (e.g., 0.035 for 3.5%)
+### Inputs
+* clean_price: quoted bond price excluding accrued interest`
+* coupon_rate (interest rate): annual coupon rate (e.g., 0.035 for 3.5%)
 * maturity: maturity date
 * settlement: settlement date
 * freq: coupon frequency per year (e.g., 2 for semiannual, 12 for monthly)
 * day_count: day count convention ("ACT/ACT", "30/360", "ACT/360")
 
-## Requirements
+### Requirements
 For each bond:
 1. Generate remaining coupon cash flows from settlement to maturity
 2. Compute accrued interest based on day count convention
 3. Compute dirty price (clean + accrued)
-4. Solve for YTM using Newton-Raphson
+4. Solve for YTM using hybrid Newton-Raphson x Bisection method
     * Use iterative root finding
     * Include convergence tolerance
     * Include max iteration safeguard
@@ -43,7 +44,6 @@ For each bond output:
 * Yield-to-Maturity
 
 ## Constraints
-* Implement in Python
 * Use Newton-Raphson for coupon bonds
 * Provide robust convergence handling
 * Structure code modularly so that cash flow generation, accrual calculation, and root solving are separable

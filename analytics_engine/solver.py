@@ -44,7 +44,19 @@ def price_from_yield(
 
 
 def _find_prev_coupon(settlement: date, maturity: date, freq: int) -> date:
-    """Find the most recent coupon date at or before settlement."""
+    """Find the most recent coupon date at or before settlement.
+    To calculate interest accrued it can be assumed that the previous coupon date is uniform with the maturity date.
+    i.e. For Bond 3, following a semiannual schedule, the last coupon date was 12/01/25.
+
+    Assumptions: B4 — MBS Passthrough: Accrued interest calculated using ACT/360 
+    from an assumed prior coupon date of February March 1, 2026 (14 days). 
+    YTM computed as monthly IRR × 12 (nominal bond-equivalent yield) treating the 6-year WAL as a bullet maturity. 
+    No prepayment model applied; principal assumed to return in full at WAL.
+    WAL of 6 years treated as bullet maturity for pricing purposes. 
+    A full treatment would require a scheduled amortization model and PSA prepayment assumption, 
+    which cannot be derived from the given inputs.
+    
+"""
     months_per_period = 12 // freq
     current = maturity
     while current > settlement:
