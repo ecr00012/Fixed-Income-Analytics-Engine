@@ -1,7 +1,5 @@
 # MBS Passthrough Pricer Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
-
 **Goal:** Add MBS passthrough pricing (PSA prepayment model, CFY solver) to the analytics engine.
 
 **Architecture:** Single new module `analytics_engine/mbs.py` contains all MBS logic. `BondSpec` gains `bond_type` and `wal` fields. Dispatch in `pricing.py` routes MBS bonds to `price_mbs()`, which computes CFY and reuses `solve_ytm()` for bullet-equivalent YTM. CLI output always shows CFY/PSA columns.

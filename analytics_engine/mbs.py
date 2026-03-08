@@ -5,18 +5,35 @@ from datetime import date
 from scipy.optimize import brentq
 
 from analytics_engine.day_count import day_count_fraction
+from analytics_engine.models import BondResult, BondSpec
+from analytics_engine.solver import solve_ytm
 
 
 def get_cpr(month: int, psa_speed: float) -> float:
-    """CPR under PSA model. Ramps 0.2%/mo for months 1-30, plateaus after."""
+    """
+    Purpose: Calculates the expected annualized Conditional Prepayment Rate (CPR) for 
+    a specific month in the life of the mortgage pool using the PSA curve.
+
+    Broader Application: The exact prepayment behavior of an MBS is technically unknown. 
+    MBS pricers project future behavior by referencing standard industry curves.
+    This function mathematically builds the PSA "ramp" (up to month 30) and "plateau" 
+    (after month 30) to give us a dynamic annualized rate to use for any given future month.
+    """
     if month <= 30:
         return psa_speed * 0.002 * month
     return psa_speed * 0.06
 
 
 def cpr_to_smm(cpr: float) -> float:
-    """Convert annual CPR to Single Monthly Mortality."""
-    cpr = min(cpr, 1.0)  # clamp: CPR > 100% is nonsensical
+    """
+    Purpose: Converts the annualized CPR into a Single Monthly Mortality (SMM) rate.
+
+    Broader Application: Because mortgages (and therefore MBS passthroughs) pay out on a
+    monthly basis, we cannot use an annualized prepayment rate directly to calculate a 
+    given month's cash flow. The engine needs to de-annualize the CPR into SMM to determine 
+    xactly what percentage of the remaining principal is prepaid this specific month.
+    """
+    cpr = min(cpr, 1.0)  
     return 1 - (1 - cpr) ** (1 / 12)
 
 
@@ -27,7 +44,17 @@ def generate_mbs_cashflows(
     current_face: float = 100.0,
     seasoning_months: int = 0,
 ) -> list[dict]:
-    """Generate monthly MBS cash flows under a PSA prepayment assumption."""
+    """
+    Purpose: Simulates the entire lifespan of the MBS month-by-month, projecting what the scheduled 
+    interest, scheduled principal, and unscheduled principal (prepayment) will be for each period 
+    until the face value is $0.
+
+    Broader Application: This is the core engine for modeling MBS cash flow projections. Unlike standard 
+    physical bonds which have highly predictable fixed coupons and a massive bullet principal 
+    payment at the end, an MBS's principal amortizes over time and changes based on prepayments. You 
+    need this complete simulated schedule to dynamically solve for the yield, average life, 
+    or value of the bond.
+    """
     balance = current_face
     monthly_rate = coupon_rate / 12
     cash_flows = []
@@ -68,7 +95,14 @@ def generate_mbs_cashflows(
 
 
 def compute_wal(cash_flows: list[dict]) -> float:
-    """Weighted Average Life in years."""
+    """
+    Purpose: Iterates over the generated cash flow schedule to calculate the 
+    Weighted Average Life (WAL) in years.
+
+    Broader Application: MBS securities do not typically last their full stated term length 
+    (e.g., 30 years) because homeowners move or refinance, prepaying their mortgages. 
+    Since the actual maturity date is variable, investors price and quote an MBS based on its WAL.
+    """
     total_principal = sum(cf["total_principal"] for cf in cash_flows)
     wal_months = sum(cf["t"] * cf["total_principal"] for cf in cash_flows) / total_principal
     return wal_months / 12
@@ -81,7 +115,14 @@ def psa_from_wal(
     current_face: float = 100.0,
     seasoning_months: int = 0,
 ) -> float:
-    """Find the PSA speed that produces the given WAL."""
+    """
+    Purpose: Finds the specific PSA prepayment speed that causes the MBS to pay off 
+    in exactly the target number of years (WAL). 
+
+    Broader Application: Since the WAL is the primary driver of an MBS's price and yield, 
+    this function is essential for "reverse engineering" the market's prepayment expectations. 
+    If a 5-year WAL is bid in the market, this function tells you what PSA speed that implies.
+    """
     def objective(psa):
         cfs = generate_mbs_cashflows(coupon_rate, psa, term_months, current_face, seasoning_months)
         return compute_wal(cfs) - target_wal
@@ -95,14 +136,32 @@ def mbs_accrued_interest(
     day_count: str,
     current_face: float = 100.0,
 ) -> float:
-    """Accrued interest from 1st of settlement month."""
+    """
+    Purpose: Calculates the accrued interest on the MBS from the first day of the settlement month 
+    up to the settlement date.
+
+    Broader Application: Accrued interest is the portion of the next coupon payment that belongs 
+    to the seller for the days they owned the bond during the coupon period. 
+    Since MBS coupons are paid monthly (unlike standard bonds which are often semi-annual), 
+    this calculation is straightforward but critical for ensuring the buyer pays the seller the 
+    correct amount for the "old" principal that is being transferred.
+    """
     accrual_start = settlement.replace(day=1)
     dcf = day_count_fraction(accrual_start, settlement, day_count)
     return current_face * coupon_rate * dcf
 
 
 def solve_cfy(cash_flows: list[dict], dirty_price: float) -> dict:
-    """Solve for Cash Flow Yield. Returns monthly, annual, and BEY."""
+    """
+    Purpose: Calculates the internal rate of return—the Cash Flow Yield (CFY)—
+    that makes the present discounted value of all projected monthly cash flows 
+    equal to the bond's dirty price (clean market price + accrued interest).
+
+    Broader Application: Since MBS cash flows are wildly non-standard, you cannot use standard yield formulas. 
+    This solver provides three perspectives on the yield: the raw monthly yield, the standard annualized CFY, 
+    and the Bond Equivalent Yield (BEY) so the trader can compare this MBS "Bond 4" head-to-head with semi-annual 
+    paying Treasury bonds.
+    """
     def pv(y):
         return sum(cf["total_cf"] / (1 + y) ** cf["t"] for cf in cash_flows)
 
@@ -115,17 +174,17 @@ def solve_cfy(cash_flows: list[dict], dirty_price: float) -> dict:
     }
 
 
-def price_mbs(spec: "BondSpec") -> "BondResult":
-    """MBS passthrough pricing pipeline.
-
-    Reads from spec: bond_type, coupon_rate, maturity (date), wal (float years),
-                     clean_price, settlement, day_count, freq
-    Assumes fixed: current_face=100.0, term_months=360, seasoning=0
-    PSA speed is solved internally from the WAL.
+def price_mbs(spec: BondSpec) -> BondResult:
     """
-    from analytics_engine.models import BondResult, BondSpec
-    from analytics_engine.solver import solve_ytm
-
+    Purpose: Acts as the primary orchestrator/pipeline. 
+    It extracts requirements from the BondSpec object, wires all the previous independent functions together 
+    in order, and wraps the calculations into a standardized BondResult output format.
+    
+    Broader Application: This is the entry point for the analytics engine to consume MBS requests. 
+    It normalizes MBS processing so that the broader application can accept standard bonds or MBS bonds seamlessly. 
+    It sequentially extracts the exact PSA speed based on market-quoted WAL, generates the actual expected lifetime cash flows, 
+    prices those cash flows out, and returns a rich set of metrics (YTM, WAL, CFY, CPR, etc.) to the user.
+    """
     current_face = 100.0
     term_months = 360
     seasoning = 0
