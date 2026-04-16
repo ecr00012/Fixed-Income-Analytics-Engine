@@ -65,7 +65,6 @@ I would also recommend adding support for other bond types, such as floating rat
 This project is built with uv.
 run 'uv sync' to install dependencies.  
 
-The environment, .git/, and pycache files are omitted from this submission.
 
 ## Python Version
 - Python 3.11
