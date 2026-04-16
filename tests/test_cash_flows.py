@@ -33,7 +33,32 @@ class TestCouponSchedule:
             freq=0,
         )
         assert schedule == []
+        
+    def test_leap_year(self):
+        """Test that the coupon schedule handles leap years correctly"""
+        schedule = generate_coupon_schedule(
+            settlement=date(2027, 2, 15),
+            maturity=date(2028, 2, 29),
+            freq=2,
+        )
+        assert schedule == [
+            date(2027, 2, 28),
+            date(2027, 8, 29),
+            date(2028, 2, 29),
+        ]
 
+    def test_first_of_month(self):
+        """MBS bond principal repayment rate is the 1st of the month"""
+        schedule = generate_coupon_schedule(
+            settlement=date(2026, 3, 15),
+            maturity=date(2026, 6, 1),
+            freq=12,
+        )   
+        assert schedule == [
+            date(2026, 4, 1),
+            date(2026, 5, 1),
+            date(2026, 6, 1),
+        ]
 
 class TestAccruedInterest:
     def test_settlement_on_coupon_date(self):

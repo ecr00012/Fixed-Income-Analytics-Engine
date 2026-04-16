@@ -4,13 +4,7 @@ The Yield to Maturity (YTM) represents the expected annual rate of return earned
 
 From the perspective of a bond investor, the YTM is the anticipated total return received if the bond is held to its maturity date and all coupon payments are made on time and are then reinvested at the same interest rate.  
 
-The hybrid Newton-Raphson x Bisection method for root finding is used to solve for YTM. The method alternates between Newton-Raphson and Bisection steps based on the following criteria:
-```
-if newton_step is inside bracket:
-    accept newton step
-else:
-    take bisection step (midpoint of bracket)
-```
+A hybrid Newton-Raphson x Bisection method for root finding is used to solve for YTM. 
 
 ## Solution
 
@@ -25,6 +19,8 @@ else:
 
 ## Algorithm 
 1. Find a bracket (range of initial guesses for the root)
+
+    *The YTM solver uses an initial bracket of [−5%, 200%] to cover all realistic fixed income scenarios, including deeply distressed bonds, while guaranteeing the pricing function changes sign across the interval.*
 2. Use the Newton-Raphson method to find the root 
 3. If Newton tries something unsafe (e.g. the new guess is outside the bracket or the function diverges) , fall back to bisection (evaluating the function at the midpoint of the bracket), narrowing the range by two, ensuring the root is within the new range
 4. Result returned when current guess is within 1e-10 of the true value or max iterations (100) is reached
@@ -54,7 +50,7 @@ Because an MBS distributes principal payments as well as interest over time, YTM
 However, to determine a truer return of the MBS, I implemented a Cash Flow Yield (CFY) calculation. This calculates the rate of return based on the actual, amortizing cash flows of the mortgage pool.
 To determine the values of the cash flows, the engine utilizes the standard Public Securities Association (PSA) prepayment model. Since the problem provided a fixed WAL, I use a root-finding algorithm (brentq, imported from scipy) to solve for the PSA speed that corresponds to the provided WAL.
 
-The YTM solver uses an initial bracket of [−5%, 200%] to cover all realistic fixed income scenarios, including deeply distressed bonds, while guaranteeing the pricing function changes sign across the interval.
+
 
 # Recommendations and Future Work
 The current project architecture is intentionally modular and robust, promoting scalability. To improve the usability of the income analytics engine, I would recommend moving the input logic to an asynchronous API. 
@@ -68,6 +64,8 @@ I would also recommend adding support for other bond types, such as floating rat
 ## Environment
 This project is built with uv.
 run 'uv sync' to install dependencies.  
+
+The environment, .git/, and pycache files are omitted from this submission.
 
 ## Python Version
 - Python 3.11
